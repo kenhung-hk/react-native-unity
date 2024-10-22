@@ -32,7 +32,9 @@ UnityFramework* UnityFrameworkLoad() {
     return ufw;
 }
 
-@implementation RNUnityView
+@implementation RNUnityView {
+    BOOL _needsReload;
+}
 
 NSDictionary* appLaunchOpts;
 
@@ -75,6 +77,8 @@ static RNUnityView *sharedInstance;
         [[[[[[self ufw] appController] window] rootViewController] view] setNeedsLayout];
 
         [NSClassFromString(@"FrameworkLibAPI") registerAPIforNativeCalls:self];
+
+        _needsReload = NO;
     }
     @catch (NSException *e) {
         NSLog(@"%@",e);
@@ -103,6 +107,7 @@ static RNUnityView *sharedInstance;
 
         if([self unityIsInitialized]) {
             [[self ufw] unloadApplication];
+            _needsReload = YES;
         }
     }
 }
@@ -225,5 +230,22 @@ Class<RCTComponentViewProtocol> RNUnityViewCls(void) {
 }
 
 #endif
+
+- (void)reloadUnityIfNeeded {
+    if (_needsReload && ![self unityIsInitialized]) {
+        [self initUnityModule];
+    }
+}
+
+- (void)didMoveToWindow {
+    [super didMoveToWindow];
+    
+    if (self.window != nil) {
+        [self reloadUnityIfNeeded];
+    } else {
+        // View is being removed from window
+        [self unloadUnity];
+    }
+}
 
 @end
